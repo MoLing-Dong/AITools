@@ -26,3 +26,11 @@ coverage
 
 #任何demo文件
 demo.*
+# Python 编译文件
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info
+dist/
+build/
