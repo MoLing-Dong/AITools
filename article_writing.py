@@ -4,8 +4,8 @@ from prompting.loader import load_all_chat_prompts
 prompts = load_all_chat_prompts()
 summary_prompt = prompts["article_transcription"]
 formatted = summary_prompt.format()
-# MAIN_CONTROLLER = "doubao-1.5-pro-32k-250115"
-MAIN_CONTROLLER = "qwen-plus-latest"
+# 选择模型
+MAIN_CONTROLLER = "doubao-1.5-pro-32k-250115"
 # 添加参考文档
 with open("reference.md", "r", encoding="utf-8") as f:
     reference = f.read()
