@@ -1,59 +1,51 @@
+import asyncio
+from loguru import logger
 from utils.ai_client import AIClient
 from prompting.loader import load_all_chat_prompts
-import os
-
-MAIN_CONTROLLER = "doubao-1.5-pro-32k-250115"
-REFERENCE_FILE = "reference.md"
-OUTPUT_FILE = "output.md"
 
 
-def load_prompt_messages() -> list:
-    """加载并格式化提示词"""
-    prompts = load_all_chat_prompts()
-    prompt_template = prompts.get("article_transcription")
-    return prompt_template.format()
-
-
-def load_reference_article(path: str) -> str:
-    """读取参考文章内容"""
-    if not os.path.exists(path):
-        raise FileNotFoundError(f"参考文件不存在：{path}")
-    with open(path, "r", encoding="utf-8") as f:
-        return f.read()
-
-
-def compose_messages(reference: str, base_messages: list) -> list:
-    """构建对话消息序列"""
-    base_messages.append({"role": "assistant", "content": reference})
-    base_messages.append({"role": "system", "content": "学习这篇文章的风格和内容。"})
-    base_messages.append({"role": "user", "content": "从新创作一篇 AI 发展的文章。"})
-    return base_messages
-
-
-def generate_article(messages: list, model: str) -> str:
-    """调用 AI 模型生成文章内容"""
-    client = AIClient(model=model)
-    return client.chat(messages)
-
-
-def save_to_file(content: str, path: str) -> None:
-    """保存生成结果"""
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(content)
-    print(f"✅ 已保存输出至：{os.path.abspath(path)}")
-
-
-def main():
+async def main():
     try:
-        messages = load_prompt_messages()
-        reference = load_reference_article(REFERENCE_FILE)
-        messages = compose_messages(reference, messages)
-        output = generate_article(messages, MAIN_CONTROLLER)
-        print(output)
-        save_to_file(output, OUTPUT_FILE)
+        MODEL_NAME = "qwen-plus"
+        COMPANY_INFO_PATH = "company_info.md"
+        OUTPUT_PATH = "company_analysis.md"
+
+        prompts = load_all_chat_prompts()
+        company_analysis_prompt = prompts["company_analysis"]
+        article_layout_prompt = prompts["article_layout"]
+
+        logger.info(f"正在加载公司信息: {COMPANY_INFO_PATH}")
+        with open(COMPANY_INFO_PATH, "r", encoding="utf-8") as f:
+            company_info = f.read()
+
+        # 第一步：公司分析
+        analysis_client = AIClient(model=MODEL_NAME)
+        analysis_messages = company_analysis_prompt.format()
+        analysis_messages.append({"role": "assistant", "content": company_info})
+        analysis_messages.append({"role": "user", "content": "分析该公司全景画像"})
+
+        logger.info("正在生成公司初步分析...")
+        first_response = await analysis_client.chat(analysis_messages)
+
+        # 第二步：格式化布局
+        layout_client = AIClient(model=MODEL_NAME)
+        layout_messages = article_layout_prompt.format()
+        layout_messages.append({"role": "user", "content": first_response})
+
+        logger.info("正在格式化分析结果...")
+        final_response = await layout_client.chat(layout_messages)
+
+        with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
+            f.write(final_response)
+        logger.success(f"分析报告已保存至: {OUTPUT_PATH}")
+
+    except FileNotFoundError as e:
+        logger.critical(f"文件不存在: {e.filename}")
+        raise
     except Exception as e:
-        print(f"❌ 出现错误：{e}")
+        logger.exception("处理过程中发生未知错误")
+        raise
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
