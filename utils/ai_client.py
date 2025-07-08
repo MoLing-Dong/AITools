@@ -1,6 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 import json
 import os
+from loguru import logger
 from typing import List, Dict, Any, AsyncGenerator, Optional
 
 import httpx
@@ -70,6 +71,16 @@ class AIClient:
         else:
             base_payload["messages"] = messages
 
+        # ✅ Volcengine: 添加 deepthink 支持
+        if self.provider == "volcengine":
+            deepthink_type = kwargs.pop("deep_think", None)
+            if deepthink_type in {"enabled", "disabled", "auto"}:
+                base_payload["thinking"] = {"type": deepthink_type}
+            else:
+                # 添加默认值为 "disabled"
+                base_payload["thinking"] = {"type": "disabled"}
+            # base_payload 删除 deep_think 参数
+            base_payload.pop("deep_think", None)
         return base_payload
 
     async def chat(
@@ -77,17 +88,14 @@ class AIClient:
     ) -> Any:
         headers = self._get_headers()
         payload = self._build_payload(messages, stream, **kwargs)
-
+        logger.debug(f"payload: {payload}")
         url = self.api_url
         if get_provider_env(self.provider).get("key_in_query"):
             url = f"{self.api_url}?key={self.api_key}"
 
         try:
-            async with httpx.AsyncClient(timeout=60) as client:
-                response = await client.post(
-                    url, headers=headers, json=payload
-                )
-                print(response.text)
+            async with httpx.AsyncClient(timeout=1800) as client:
+                response = await client.post(url, headers=headers, json=payload)
 
                 if response.status_code != 200:
                     return f"[请求失败] {response.status_code} - {response.text}"
@@ -107,6 +115,13 @@ class AIClient:
     def _parse_non_stream_response(self, response: httpx.Response) -> str:
         try:
             data = response.json()
+            # 检查是否输出了reasoning_content
+            if data["choices"][0]["message"].get("reasoning_content"):
+                logger.debug(
+                    f"reasoning_content: {data['choices'][0]['message']['reasoning_content']}"
+                )
+            else:
+                logger.debug("未检测到 reasoning_content 字段")
 
             if self.parser and "non_stream" in self.parser:
                 return self.parser["non_stream"](data)
