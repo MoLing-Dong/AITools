@@ -88,7 +88,6 @@ class AIClient:
     ) -> Any:
         headers = self._get_headers()
         payload = self._build_payload(messages, stream, **kwargs)
-        logger.debug(f"payload: {payload}")
         url = self.api_url
         if get_provider_env(self.provider).get("key_in_query"):
             url = f"{self.api_url}?key={self.api_key}"

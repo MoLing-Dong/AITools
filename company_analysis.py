@@ -25,19 +25,19 @@ async def main():
         analysis_messages.append({"role": "user", "content": company_info})
 
         logger.info("正在生成公司初步分析...")
-        first_response = await analysis_client.chat(
+        first_analysis = await analysis_client.chat(
             analysis_messages, deep_think="disabled"
         )
         # 是否为空 打印获取内容长度
-        if not first_response or len(first_response) == 0:
+        if not first_analysis or len(first_analysis) == 0:
             logger.error("初步分析结果为空，请检查输入内容或模型配置")
             return
         else:
-            logger.info(f"初步分析结果长度: {len(first_response)}")
+            logger.info(f"初步分析结果长度: {len(first_analysis)}")
         # 第二步：格式化布局
-        layout_agent = ArticleLayoutAgent(model=MODEL_NAME)
+        format_analysis = ArticleLayoutAgent(model=MODEL_NAME)
         logger.info("正在格式化分析结果...")
-        final_response = await layout_agent.format(first_response)
+        final_response = await format_analysis.format(first_analysis)
 
         with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
             f.write(final_response)
