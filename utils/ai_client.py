@@ -7,7 +7,7 @@ from typing import List, Dict, Any, AsyncGenerator, Optional
 import httpx
 from dotenv import load_dotenv
 
-# 导入模型配置
+# Import model config
 from utils.model_config import detect_provider, get_provider_env, get_provider_parser
 
 load_dotenv()
@@ -26,13 +26,17 @@ class AIClient:
         api_url_env = env_config.get("api_url")
 
         if not api_key_env or not api_url_env:
-            raise EnvironmentError(f"提供商 {self.provider} 的环境变量配置缺失")
+            raise EnvironmentError(
+                f"Missing environment variable configuration for provider {self.provider}"
+            )
 
         api_key = os.getenv(api_key_env)
         api_url = os.getenv(api_url_env)
 
         if not api_key or not api_url:
-            raise EnvironmentError(f"环境变量缺失：{api_key_env} 或 {api_url_env}")
+            raise EnvironmentError(
+                f"Missing environment variable: {api_key_env} or {api_url_env}"
+            )
 
         return api_key, api_url
 
@@ -71,15 +75,15 @@ class AIClient:
         else:
             base_payload["messages"] = messages
 
-        # ✅ Volcengine: 添加 deepthink 支持
+        # ✅ Volcengine: Add deepthink support
         if self.provider == "volcengine":
             deepthink_type = kwargs.pop("deep_think", None)
             if deepthink_type in {"enabled", "disabled", "auto"}:
                 base_payload["thinking"] = {"type": deepthink_type}
             else:
-                # 添加默认值为 "disabled"
+                # Add default value "disabled"
                 base_payload["thinking"] = {"type": "disabled"}
-            # base_payload 删除 deep_think 参数
+            # Remove deep_think parameter from base_payload
             base_payload.pop("deep_think", None)
         return base_payload
 
@@ -97,7 +101,7 @@ class AIClient:
                 response = await client.post(url, headers=headers, json=payload)
 
                 if response.status_code != 200:
-                    return f"[请求失败] {response.status_code} - {response.text}"
+                    return f"[Request Failed] {response.status_code} - {response.text}"
 
                 if stream:
                     return self._stream_response(response)
@@ -105,22 +109,22 @@ class AIClient:
                     return self._parse_non_stream_response(response)
 
         except httpx.TimeoutException:
-            return "[错误] 请求超时，请稍后重试"
+            return "[Error] Request timed out, please try again later"
         except httpx.RequestError as e:
-            return f"[请求失败] {e}"
+            return f"[Request Failed] {e}"
         except Exception as e:
-            return f"[未知错误] {e}"
+            return f"[Unknown Error] {e}"
 
     def _parse_non_stream_response(self, response: httpx.Response) -> str:
         try:
             data = response.json()
-            # 检查是否输出了reasoning_content
+            # Check if reasoning_content is output
             if data["choices"][0]["message"].get("reasoning_content"):
                 logger.debug(
                     f"reasoning_content: {data['choices'][0]['message']['reasoning_content']}"
                 )
             else:
-                logger.debug("未检测到 reasoning_content 字段")
+                logger.debug("No reasoning_content field detected")
 
             if self.parser and "non_stream" in self.parser:
                 return self.parser["non_stream"](data)
@@ -128,7 +132,7 @@ class AIClient:
             return data["choices"][0]["message"]["content"]
 
         except (KeyError, IndexError, json.JSONDecodeError) as e:
-            return f"[解析错误] 返回格式异常：{e}\n原始响应：{response.text[:500]}"
+            return f"[Parse Error] Abnormal return format: {e}\nRaw response: {response.text[:500]}"
 
     async def _stream_response(
         self, response: httpx.Response
@@ -146,10 +150,10 @@ class AIClient:
                     yield content
 
         except Exception as e:
-            yield f"\n[流式解析异常] {e}"
+            yield f"\n[Stream Parse Exception] {e}"
 
         if not buffer.strip():
-            yield "[警告] 未接收到有效内容"
+            yield "[Warning] No valid content received"
 
     def _extract_stream_content(self, line: str) -> Optional[str]:
         try:
@@ -172,7 +176,7 @@ class AIClient:
         except json.JSONDecodeError:
             pass
         except Exception as e:
-            return f"[解析错误: {e}]"
+            return f"[Parse Error: {e}]"
 
         return None
 
@@ -181,5 +185,5 @@ class AIClient:
             "model": self.model,
             "provider": self.provider,
             "api_url": self.api_url,
-            "has_api_key": bool(self.api_key),
+            "has_api_key": "true" if self.api_key else "false",
         }
