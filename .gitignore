@@ -38,3 +38,4 @@ build/
 !README.md
 *.txt
 *.log
+!requirements.txt
