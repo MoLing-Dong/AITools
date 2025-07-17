@@ -10,7 +10,7 @@ async def main():
     try:
         MODEL_NAME = "doubao-seed-1-6-250615"
         ARTICLE_PATH = "model_essay.md"
-        OUTPUT_PATH = "article_transcription.md"
+        OUTPUT_PATH = "./output/article_transcription.md"
         DEEP_THINK = "disabled"
 
         prompts = load_all_chat_prompts()
@@ -87,6 +87,9 @@ async def main():
         layout_agent = ArticleLayoutAgent(model=MODEL_NAME)
         logger.info("Formatting analysis result...")
         final_response = await layout_agent.format(first_response)
+
+        # 新增：确保输出目录存在
+        os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
 
         with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
             f.write(final_response)

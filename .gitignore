@@ -28,14 +28,15 @@ coverage
 demo.*
 # Python 编译文件
 __pycache__/
+dist/
+build/
+output/
 *.py[cod]
 *.so
 *.egg
 *.egg-info
-dist/
-build/
 *.md
-!README.md
 *.txt
 *.log
+!README.md
 !requirements.txt
